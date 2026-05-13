@@ -1,0 +1,11 @@
+{
+  "name": "azure-openai-realtime-demos",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node src/server.js",
+    "test": "node --test",
+    "start": "node src/server.js"
+  }
+}

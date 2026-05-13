@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>gpt-realtime-whisper Demo</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-demo="whisper">
+    <main class="shell">
+      <nav class="navline">
+        <a href="/">All demos</a>
+        <span>gpt-realtime-whisper</span>
+      </nav>
+
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Realtime transcription</p>
+          <h1>gpt-realtime-whisper</h1>
+        </div>
+        <span class="status-pill" id="status">Idle</span>
+      </header>
+
+      <section class="workspace">
+        <section class="control-panel" aria-label="Whisper controls">
+          <div class="button-row">
+            <button class="button primary" id="startButton" type="button">Start</button>
+            <button class="button secondary" id="stopButton" type="button" disabled>Stop</button>
+          </div>
+          <p class="hint">
+            The browser sends microphone audio to a short-lived Realtime transcription
+            session. The Azure API key remains on the local server.
+          </p>
+        </section>
+
+        <section class="transcript-grid single">
+          <article class="transcript-panel">
+            <header>
+              <h2>Live transcript</h2>
+              <button class="icon-button" id="clearSource" type="button" aria-label="Clear transcript">Clear</button>
+            </header>
+            <p id="sourceTranscript" class="transcript"></p>
+          </article>
+        </section>
+      </section>
+
+      <section class="event-panel">
+        <header>
+          <h2>Realtime events</h2>
+          <button class="icon-button" id="clearEvents" type="button">Clear</button>
+        </header>
+        <pre id="eventLog"></pre>
+      </section>
+    </main>
+
+    <script type="module" src="/realtime-client.js"></script>
+  </body>
+</html>

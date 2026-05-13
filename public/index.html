@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Azure OpenAI Realtime Demos</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Azure OpenAI</p>
+          <h1>Realtime Demo Console</h1>
+        </div>
+        <span class="status-pill" id="serverStatus">Checking config</span>
+      </header>
+
+      <section class="demo-grid">
+        <article class="demo-card">
+          <div>
+            <p class="eyebrow">Speech to speech</p>
+            <h2>gpt-realtime-translate</h2>
+            <p>
+              Speak into the microphone and hear translated speech back in the selected
+              target language.
+            </p>
+          </div>
+          <a class="button primary" href="/translate.html">Open translate demo</a>
+        </article>
+
+        <article class="demo-card">
+          <div>
+            <p class="eyebrow">Speech to text</p>
+            <h2>gpt-realtime-whisper</h2>
+            <p>
+              Stream microphone audio to a transcription session and display live
+              transcript events.
+            </p>
+          </div>
+          <a class="button primary" href="/whisper.html">Open whisper demo</a>
+        </article>
+      </section>
+    </main>
+
+    <script type="module">
+      const status = document.querySelector("#serverStatus");
+      try {
+        const response = await fetch("/api/config", { cache: "no-store" });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Config unavailable");
+        status.textContent = "Configured";
+        status.classList.add("connected");
+      } catch (error) {
+        status.textContent = error.message;
+        status.classList.add("error");
+      }
+    </script>
+  </body>
+</html>

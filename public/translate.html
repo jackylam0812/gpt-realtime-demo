@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>gpt-realtime-translate Demo</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body data-demo="translate">
+    <main class="shell">
+      <nav class="navline">
+        <a href="/">All demos</a>
+        <span>gpt-realtime-translate</span>
+      </nav>
+
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Realtime translation</p>
+          <h1>gpt-realtime-translate</h1>
+        </div>
+        <span class="status-pill" id="status">Idle</span>
+      </header>
+
+      <section class="workspace translate-workspace">
+        <section class="control-panel" aria-label="Translate controls">
+          <label>
+            <span>Target language</span>
+            <select id="targetLanguage">
+              <option value="en">English</option>
+              <option value="zh-cn">Chinese</option>
+              <option value="ja">Japanese</option>
+              <option value="ko">Korean</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="es">Spanish</option>
+            </select>
+          </label>
+
+          <div class="button-row">
+            <button class="button primary" id="startButton" type="button">Start</button>
+            <button class="button secondary" id="stopButton" type="button" disabled>Stop</button>
+          </div>
+
+          <audio id="remoteAudio" autoplay></audio>
+        </section>
+
+        <section class="speech-stage" aria-label="Speech translation status">
+          <article class="speech-panel listening">
+            <p class="eyebrow">Input</p>
+            <h2>Speak into your microphone</h2>
+            <div class="meter" aria-hidden="true">
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <p class="hint">Your speech is streamed to the translation model.</p>
+          </article>
+
+          <article class="speech-panel output">
+            <p class="eyebrow">Output</p>
+            <h2>Translated speech plays here</h2>
+            <div class="audio-pulse" id="audioPulse" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </div>
+            <p class="hint" id="audioStatus">Waiting for translated audio.</p>
+          </article>
+        </section>
+      </section>
+
+      <section class="event-panel">
+        <header>
+          <h2>Realtime events</h2>
+          <button class="icon-button" id="clearEvents" type="button">Clear</button>
+        </header>
+        <pre id="eventLog"></pre>
+      </section>
+    </main>
+
+    <script type="module" src="/realtime-client.js"></script>
+  </body>
+</html>
