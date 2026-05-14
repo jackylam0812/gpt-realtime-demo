@@ -20,11 +20,6 @@ const elements = {
 let peerConnection;
 let dataChannel;
 let mediaStream;
-let translateSocket;
-let audioContext;
-let microphoneSource;
-let microphoneProcessor;
-let playbackTime = 0;
 let sourceBuffer = "";
 let translatedBuffer = "";
 let sourceDelta = "";
@@ -47,11 +42,6 @@ elements.clearEvents?.addEventListener("click", () => {
 });
 
 async function startDemo() {
-  if (demo === "translate") {
-    await startTranslateWebSocketDemo();
-    return;
-  }
-
   setStatus("Requesting microphone");
   elements.startButton.disabled = true;
   elements.stopButton.disabled = false;
@@ -74,7 +64,10 @@ async function startDemo() {
     dataChannel = peerConnection.createDataChannel("oai-events");
     dataChannel.addEventListener("open", () => {
       setStatus("Connected", "connected");
-      logEvent({ type: "demo.connected", demo });
+      logEvent({ type: "demo.connected", demo, transport: "webrtc" });
+      if (demo === "translate") {
+        setAudioStatus("Listening for translated speech.", false);
+      }
     });
     dataChannel.addEventListener("message", handleRealtimeMessage);
     dataChannel.addEventListener("close", () => setStatus("Closed"));
@@ -82,6 +75,10 @@ async function startDemo() {
     if (elements.remoteAudio) {
       peerConnection.addEventListener("track", (event) => {
         elements.remoteAudio.srcObject = event.streams[0];
+        elements.remoteAudio.play?.().catch(() => {});
+        if (demo === "translate") {
+          markTranslatedAudio();
+        }
       });
     }
 
@@ -118,8 +115,6 @@ async function startDemo() {
 }
 
 function stopDemo(options = {}) {
-  stopTranslateWebSocket();
-
   dataChannel?.close();
   dataChannel = undefined;
 
@@ -132,142 +127,13 @@ function stopDemo(options = {}) {
   elements.startButton.disabled = false;
   elements.stopButton.disabled = true;
 
+  if (demo === "translate") {
+    setAudioStatus("Waiting for translated audio.", false);
+  }
+
   if (!options.keepStatus) {
     setStatus("Idle");
   }
-}
-
-async function startTranslateWebSocketDemo() {
-  setStatus("Requesting microphone");
-  elements.startButton.disabled = true;
-  elements.stopButton.disabled = false;
-
-  try {
-    audioContext = new AudioContext({ sampleRate: 24000 });
-    mediaStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-      },
-    });
-
-    const protocol = location.protocol === "https:" ? "wss:" : "ws:";
-    const targetLanguage = encodeURIComponent(elements.targetLanguage.value);
-    translateSocket = new WebSocket(
-      `${protocol}//${location.host}/api/realtime/translate/ws?targetLanguage=${targetLanguage}`,
-    );
-
-    translateSocket.addEventListener("open", () => {
-      setStatus("Connected", "connected");
-      startMicrophoneStreaming();
-    });
-
-    translateSocket.addEventListener("message", (message) => {
-      const event = JSON.parse(message.data);
-      logEvent(event);
-      handleTranslationWebSocketEvent(event);
-    });
-
-    translateSocket.addEventListener("error", () => {
-      setStatus("Translation WebSocket error", "error");
-    });
-
-    translateSocket.addEventListener("close", () => {
-      stopTranslateWebSocket();
-      setStatus("Idle");
-    });
-  } catch (error) {
-    logEvent({ type: "demo.error", message: error.message });
-    setStatus(error.message, "error");
-    stopDemo({ keepStatus: true });
-  }
-}
-
-function startMicrophoneStreaming() {
-  microphoneSource = audioContext.createMediaStreamSource(mediaStream);
-  microphoneProcessor = audioContext.createScriptProcessor(4096, 1, 1);
-
-  microphoneProcessor.onaudioprocess = (event) => {
-    if (translateSocket?.readyState !== WebSocket.OPEN) {
-      return;
-    }
-
-    const input = event.inputBuffer.getChannelData(0);
-    const pcm16 = floatToPcm16(input, event.inputBuffer.sampleRate, 24000);
-    translateSocket.send(
-      JSON.stringify({
-        type: "session.input_audio_buffer.append",
-        audio: arrayBufferToBase64(pcm16.buffer),
-      }),
-    );
-  };
-
-  microphoneSource.connect(microphoneProcessor);
-  microphoneProcessor.connect(audioContext.destination);
-}
-
-function handleTranslationWebSocketEvent(event) {
-  if (event.type === "proxy.connected") {
-    return;
-  }
-
-  if (event.type === "proxy.error" || event.type === "error") {
-    setStatus(event.message || event.error?.message || "Translation error", "error");
-    return;
-  }
-
-  if (event.type === "session.input_transcript.delta") {
-    applyTranscriptEvent("source", event);
-    return;
-  }
-
-  if (event.type === "conversation.item.input_audio_transcription.completed") {
-    commitTranscript("source", event.transcript);
-    return;
-  }
-
-  if (event.type === "session.output_transcript.delta") {
-    applyTranscriptEvent("translated", event);
-    return;
-  }
-
-  if (
-    event.type === "session.output_transcript.done" ||
-    event.type === "response.audio_transcript.done"
-  ) {
-    commitTranscript("translated", event.transcript);
-    return;
-  }
-
-  if (event.type === "response.audio_transcript.delta") {
-    applyTranscriptEvent("translated", event);
-    return;
-  }
-
-  if (event.type === "session.output_audio.delta") {
-    markTranslatedAudio();
-    playPcm16Audio(event.delta);
-  }
-}
-
-function stopTranslateWebSocket() {
-  microphoneProcessor?.disconnect();
-  microphoneProcessor = undefined;
-
-  microphoneSource?.disconnect();
-  microphoneSource = undefined;
-
-  if (translateSocket?.readyState === WebSocket.OPEN) {
-    translateSocket.close();
-  }
-  translateSocket = undefined;
-
-  if (audioContext?.state !== "closed") {
-    audioContext?.close();
-  }
-  audioContext = undefined;
-  playbackTime = 0;
-  setAudioStatus("Waiting for translated audio.", false);
 }
 
 async function createSession() {
@@ -311,7 +177,7 @@ function markTranslatedAudio() {
   setAudioStatus("Receiving translated speech.", true);
   window.clearTimeout(markTranslatedAudio.timeout);
   markTranslatedAudio.timeout = window.setTimeout(() => {
-    setAudioStatus("Waiting for translated audio.", false);
+    setAudioStatus("Listening for translated speech.", false);
   }, 900);
 }
 
@@ -345,6 +211,14 @@ function handleRealtimeMessage(message) {
     event.type?.includes("translation")
   ) {
     applyTranscriptEvent("translated", event);
+  }
+
+  if (event.type === "output_audio_buffer.started") {
+    markTranslatedAudio();
+  }
+
+  if (event.type === "output_audio_buffer.stopped") {
+    setAudioStatus("Listening for translated speech.", false);
   }
 }
 
@@ -410,71 +284,4 @@ function logEvent(event) {
 
   elements.eventLog.textContent += `[${timestamp}] ${type}\n${JSON.stringify(compact, null, 2)}\n\n`;
   elements.eventLog.scrollTop = elements.eventLog.scrollHeight;
-}
-
-function floatToPcm16(float32, sourceRate, targetRate) {
-  const samples =
-    sourceRate === targetRate ? float32 : resampleFloat32(float32, sourceRate, targetRate);
-  const pcm16 = new Int16Array(samples.length);
-  for (let index = 0; index < samples.length; index += 1) {
-    const sample = Math.max(-1, Math.min(1, samples[index]));
-    pcm16[index] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
-  }
-  return pcm16;
-}
-
-function resampleFloat32(input, sourceRate, targetRate) {
-  const outputLength = Math.max(1, Math.round((input.length * targetRate) / sourceRate));
-  const output = new Float32Array(outputLength);
-  const ratio = (input.length - 1) / Math.max(1, outputLength - 1);
-
-  for (let index = 0; index < outputLength; index += 1) {
-    const sourceIndex = index * ratio;
-    const before = Math.floor(sourceIndex);
-    const after = Math.min(before + 1, input.length - 1);
-    const weight = sourceIndex - before;
-    output[index] = input[before] * (1 - weight) + input[after] * weight;
-  }
-
-  return output;
-}
-
-function arrayBufferToBase64(buffer) {
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  for (let index = 0; index < bytes.length; index += 1) {
-    binary += String.fromCharCode(bytes[index]);
-  }
-  return btoa(binary);
-}
-
-function base64ToInt16Array(base64) {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-  return new Int16Array(bytes.buffer);
-}
-
-function playPcm16Audio(base64Pcm16) {
-  if (!audioContext || !base64Pcm16) {
-    return;
-  }
-
-  const pcm16 = base64ToInt16Array(base64Pcm16);
-  const audioBuffer = audioContext.createBuffer(1, pcm16.length, 24000);
-  const channel = audioBuffer.getChannelData(0);
-
-  for (let index = 0; index < pcm16.length; index += 1) {
-    channel[index] = pcm16[index] / 0x8000;
-  }
-
-  const source = audioContext.createBufferSource();
-  source.buffer = audioBuffer;
-  source.connect(audioContext.destination);
-
-  const startTime = Math.max(audioContext.currentTime, playbackTime);
-  source.start(startTime);
-  playbackTime = startTime + audioBuffer.duration;
 }

@@ -8,7 +8,6 @@ import {
   buildTranscriptionSession,
   loadConfig,
 } from "./config.js";
-import { handleTranslateWebSocketUpgrade } from "./websocket-proxy.js";
 
 const PUBLIC_DIR = resolve(process.cwd(), "public");
 const MIME_TYPES = {
@@ -102,7 +101,6 @@ async function handleApi(request, response, pathname) {
       endpoint: config.endpoint,
       translateDeployment: config.translateDeployment,
       whisperDeployment: config.whisperDeployment,
-      translateSocketPath: "/api/realtime/translate/ws",
       whisperCallUrl: buildRealtimeUrl(config.endpoint, "calls"),
     });
     return;
@@ -184,8 +182,4 @@ const server = createServer(async (request, response) => {
 
 server.listen(config.port, () => {
   console.log(`Azure OpenAI Realtime demos running at http://localhost:${config.port}`);
-});
-
-server.on("upgrade", (request, socket, head) => {
-  handleTranslateWebSocketUpgrade(request, socket, head, config);
 });

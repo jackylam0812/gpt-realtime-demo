@@ -3,8 +3,6 @@ import { describe, test } from "node:test";
 
 import {
   buildRealtimeUrl,
-  buildTranslationSessionUpdate,
-  buildTranslationWebSocketUrl,
   buildTranslationSession,
   buildTranscriptionSession,
   loadConfig,
@@ -65,23 +63,6 @@ describe("session builders", () => {
     });
   });
 
-  test("creates translation session.update event for WebSocket sessions", () => {
-    assert.deepEqual(buildTranslationSessionUpdate("en"), {
-      type: "session.update",
-      session: {
-        audio: {
-          input: {
-            transcription: {
-              model: "gpt-realtime-whisper",
-            },
-          },
-          output: {
-            language: "en",
-          },
-        },
-      },
-    });
-  });
 });
 
 describe("buildRealtimeUrl", () => {
@@ -97,13 +78,4 @@ describe("buildRealtimeUrl", () => {
     );
   });
 
-  test("builds Azure OpenAI translation WebSocket endpoint", () => {
-    assert.equal(
-      buildTranslationWebSocketUrl(
-        "https://example.openai.azure.com",
-        "gpt-realtime-translate",
-      ),
-      "wss://example.openai.azure.com/openai/v1/realtime/translations?model=gpt-realtime-translate",
-    );
-  });
 });

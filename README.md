@@ -5,7 +5,7 @@ Two small browser demos for Azure OpenAI Realtime:
 - `gpt-realtime-translate`: microphone audio in, translated speech out.
 - `gpt-realtime-whisper`: microphone audio in, live transcription events out.
 
-The browser never receives the Azure OpenAI API key. The local Node server creates short-lived Realtime client secrets for Whisper, proxies the Azure translation WebSocket for Translate, and serves the static pages.
+The browser never receives the Azure OpenAI API key. The local Node server creates short-lived Realtime client secrets and serves the static pages. Both demos connect browser microphone audio to Azure OpenAI through WebRTC.
 
 ## Run
 
@@ -41,23 +41,19 @@ PORT=3000
 ## Notes
 
 - Browser microphone access requires `localhost` or HTTPS.
-- The translation demo uses a local WebSocket proxy to Azure's `/openai/v1/realtime/translations?model=...` endpoint. It demonstrates speech-to-speech translation and avoids exposing the API key in the browser.
+- The translation demo uses WebRTC with Azure's `/openai/v1/realtime/translations/client_secrets` and `/openai/v1/realtime/translations/calls` endpoints. It demonstrates speech-to-speech translation and avoids exposing the API key in the browser.
 - The Whisper demo creates a transcription session and connects through the normal Realtime call endpoint.
 - `.env` is ignored by git so keys are not committed.
 
 ## Diagnostics
 
-To test only the translation WebSocket proxy:
-
-```bash
-node -e "const ws=new WebSocket('ws://localhost:3000/api/realtime/translate/ws?targetLanguage=en'); ws.onmessage=e=>{console.log(e.data); ws.close()}; ws.onopen=()=>console.log('open')"
-```
-
-To test the currently unsupported Azure translation client-secret call directly:
+To test the Azure translation WebRTC client-secret call directly:
 
 ```bash
 node scripts/check-translate-session.js en
 ```
+
+If this returns `DeploymentNotFound`, Azure is rejecting the translation WebRTC endpoint for the configured resource/deployment before the browser can start the WebRTC SDP exchange.
 
 If your shell does not have global `node`, use the bundled runtime path shown by Codex:
 

@@ -75,24 +75,6 @@ export function buildTranslationSession(model, targetLanguage) {
   };
 }
 
-export function buildTranslationSessionUpdate(targetLanguage) {
-  return {
-    type: "session.update",
-    session: {
-      audio: {
-        input: {
-          transcription: {
-            model: DEFAULT_WHISPER_DEPLOYMENT,
-          },
-        },
-        output: {
-          language: targetLanguage,
-        },
-      },
-    },
-  };
-}
-
 export function buildTranscriptionSession(model) {
   return {
     session: {
@@ -117,9 +99,4 @@ export function buildRealtimeUrl(endpoint, path) {
 
 export function buildClientSecretUrl(endpoint, path = "client_secrets") {
   return `${endpoint}/openai/v1/realtime/${path}`;
-}
-
-export function buildTranslationWebSocketUrl(endpoint, model) {
-  const wsEndpoint = endpoint.replace(/^https:/, "wss:");
-  return `${wsEndpoint}/openai/v1/realtime/translations?model=${encodeURIComponent(model)}`;
 }
